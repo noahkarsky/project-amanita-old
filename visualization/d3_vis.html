@@ -20,13 +20,16 @@
 
         .node {
             stroke: rgb(39, 87, 177);
-            fill: rgb(39, 87, 177);
-            stroke-width: 2;
         }
 
         .link {
             stroke: rgb(0, 0, 0);
             stroke-width: 2;
+        }
+
+        .edgeLabel {
+            font-size: 12px;
+            fill: #333;
         }
 
         .tooltip {
@@ -51,8 +54,22 @@
             d3.csv('data/edges.csv')
         ]).then(function (data) {
             var nodes = data[0];
-            var edges = data[1];
-            var color = d3.scaleOrdinal(d3.schemeCategory10);
+            var edges = data[1];// Define a custom color map
+            var colorMap = {
+                'program': '#4e79a7',
+                'person': '#f28e2c',
+                'position': '#e15759',
+                'publication': '#76b7b2',
+                'event': '#59a14f',
+                'place': '#edc948',
+                'concept': '#b07aa1',
+                'organization': '#ff9da7',
+                'group': '#9c755f',
+                'date': '#bab0ac',
+                'civilian_contractor': '#9467bd',
+                'object': '#d37295',
+                'technology': '#17becf'
+            };
 
             nodes.forEach(function (node) {
                 if (node.properties) {
@@ -68,17 +85,77 @@
                 console.log(node.name); // Add this line to check the name value
             });
 
+            edges.forEach(function (edge) {
+                if (edge.properties) {
+                    edge.properties = JSON.parse(edge.properties);
+                    edge.type = edge.properties.type; // Extract the type from the properties
+                    if (edge.properties.properties) {
+                        edge.notes = edge.properties.properties.notes; // Extract the notes if available
+                    }
+                }
+            });
 
-            // Create a D3 force simulation
+
             var simulation = d3.forceSimulation(nodes)
-                .force("link", d3.forceLink(edges).id(d => d.id))
-                .force("charge", d3.forceManyBody().strength(-50))
-                .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2));
+                .force('collide', d3.forceCollide().radius(30))
+                .force('charge', d3.forceManyBody().strength(-150))
+                .force('link', d3.forceLink(edges).id(function (d) {
+                    return d.id;
+                }).distance(100))
+                .force('center', d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
+                .on('tick', function () {
+                    tick();
+                })
+                .on('end', function () {
+                    if (options.zoomFit && !justLoaded) {
+                        justLoaded = true;
+                        zoomFit(2);
+                    }
+                });
+
+
+
+
 
             var svg = d3.select('svg');
+            var defs = svg.append("defs"); // Add this line
             var g = svg.append("g");
 
-            //add a zooming functionality
+            // Create SVG groups for each edge
+            var linkGroup = g.selectAll(".linkGroup")
+                .data(edges)
+                .join("g")
+                .attr("class", "linkGroup");
+
+            // Create lines for each edge
+            linkGroup.append("line")
+                .attr("class", "link")
+                .attr("marker-end", "url(#arrow)"); // Add the arrow marker to the end of each link
+
+            // Create edge labels
+            linkGroup.append("text")
+                .attr("class", "edgeLabel")
+                .attr("text-anchor", "middle")
+                .attr("dy", -5)
+                .text(function (d) { return d.type; }); // Change this to the appropriate attribute for your edge label
+
+
+
+            // Add this block after creating the defs element
+            defs.append("marker")
+                .attr("id", "arrow")
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 27) // Set the position of the arrow marker to touch the node
+                .attr("refY", 0)
+                .attr("markerWidth", 4) // Reduce the markerWidth to make the arrowhead smaller
+                .attr("markerHeight", 4) // Reduce the markerHeight to make the arrowhead smaller
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("class", "arrowHead");
+
+
+            // Add zooming functionality
             var zoom = d3.zoom()
                 .scaleExtent([0.1, 10])
                 .on("zoom", zoomed);
@@ -86,17 +163,19 @@
             svg.call(zoom);
 
             // Create SVG lines for each edge
-            var link = g.selectAll(".link") // Changed from svg.selectAll to g.selectAll
+            var link = g.selectAll(".link")
                 .data(edges)
                 .join("line")
-                .attr("class", "link");
+                .attr("class", "link")
+                .attr("marker-end", "url(#arrow)"); // Add arrow marker
 
             // Create SVG circles for each node
-            var node = g.selectAll(".node") // Changed from svg.selectAll to g.selectAll
+            var node = g.selectAll(".node")
                 .data(nodes)
                 .join("circle")
                 .attr("class", "node")
-                .attr("r", 15) // Increased the radius from 10 to 15
+                .attr("r", 15)
+                .attr("fill", function (d) { return colorMap[d.properties.labels]; })
                 .on("mouseover", showTooltip)
                 .on("mousemove", moveTooltip)
                 .on("mouseout", hideTooltip)
@@ -105,15 +184,20 @@
                     .on("drag", dragged)
                     .on("end", dragended));
 
-
-
-
             // Create text labels for each node
-            var label = g.selectAll(".label") // Changed from svg.selectAll to g.selectAll
+            var label = g.selectAll(".label")
                 .data(nodes)
                 .join("text")
                 .text(function (d) { return d.name; })
                 .attr("class", "label");
+
+            // Create edge labels
+            var edgeLabel = g.selectAll(".edge-label")
+                .data(edges)
+                .join("text")
+                .attr("class", "edge-label")
+                .attr("dy", -2); // Adjust the vertical position of the label
+
 
             // Update the visualization on each tick of the simulation
             simulation.on("tick", function () {
@@ -126,9 +210,15 @@
                 node
                     .attr("cx", function (d) { return d.x; })
                     .attr("cy", function (d) { return d.y; })
+
                 label
-                    .attr('x', function (d) { return d.x + 20; }) // Increased the x offset from 15 to 20
+                    .attr('x', function (d) { return d.x + 20; })
                     .attr('y', function (d) { return d.y + 5; });
+
+                edgeLabel
+                    .attr("x", function (d) { return (d.source.x + d.target.x) / 2; })
+                    .attr("y", function (d) { return (d.source.y + d.target.y) / 2; })
+                    .text(function (d) { return d.type; });
             });
 
             // Drag functions
@@ -144,17 +234,17 @@
             }
 
             function dragended(event, d) {
-    if (!event.active) simulation.alphaTarget(0);
-    d.fx = d.x; // Change this line
-    d.fy = d.y; // Change this line
-}
-
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = d.x;
+                d.fy = d.y;
+            }
 
             // Show tooltip function
             function showTooltip(event, d) {
                 d3.select('.tooltip')
                     .style('display', 'block')
-                    .html(d.name + '<br>' + d.properties.notes) // Changed from d.notes to d.properties.notes
+                    //fix this in the future
+                    .html(d.name + '<br>' + 'notes:' + d.properties.properties.notes + '<br>' + 'start_date:' + d.properties.properties.start_date + '<br>' + 'end_date:' + d.properties.properties.end_date)
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY + 10) + 'px');
             }
@@ -172,7 +262,7 @@
                     .style('display', 'none');
             }
 
-            // zoom function
+            // Zoom function
             function zoomed(event) {
                 g.attr("transform", event.transform);
             }
