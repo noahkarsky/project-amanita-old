@@ -77,8 +77,8 @@
         const labelThreshold = 2; // Set the zoom threshold for showing/hiding edge labels
         // Load the nodes and edges CSV files using d3.csv()
         Promise.all([
-            d3.csv('data/nodes.csv'),
-            d3.csv('data/edges.csv')
+            d3.csv('visualization/data/nodes.csv'),
+            d3.csv('visualization/data/edges.csv')
         ]).then(function (data) {
             var nodes = data[0];
             var edges = data[1];// Define a custom color map
