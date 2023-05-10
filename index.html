@@ -196,6 +196,14 @@
                     .on("start", dragstarted)
                     .on("drag", dragged)
                     .on("end", dragended));
+            node.on("mouseover", function (event, d) {
+                showTooltip(event, d);
+                highlightConnectedNodes(event, d);
+            })
+                .on("mouseout", function (event, d) {
+                    hideTooltip(event, d);
+                    resetOpacity();
+                });
 
             var label = g.selectAll(".label")
                 .data(nodes)
@@ -254,6 +262,8 @@
                         }
                     });
                 });
+
+
             // Add event listeners for the label elements
             label.on("mouseover", showTooltip)
                 .on("mousemove", moveTooltip)
@@ -261,10 +271,15 @@
                 .call(d3.drag()
                     .on("start", dragstarted)
                     .on("drag", dragged)
-                    .on("end", dragended));
-
-
-
+                    .on("end", dragended))
+                .on("mouseover", function (event, d) {
+                    showTooltip(event, d);
+                    highlightConnectedNodes(event, d);
+                })
+                .on("mouseout", function (event, d) {
+                    hideTooltip(event, d);
+                    resetOpacity();
+                });
 
 
 
@@ -280,6 +295,10 @@
                 })
                 .text(function (d) { return d.type; });
 
+            var linkedByIndex = {};
+            edges.forEach(function (d) {
+                linkedByIndex[`${d.source},${d.target}`] = 1;
+            });
 
 
             // Update the visualization on each tick of the simulation
@@ -325,6 +344,30 @@
                 d.fy = d.y;
             }
 
+            function highlightConnectedNodes(event, d) {
+                node.style("opacity", function (o) {
+                    return isConnected(d, o) ? 1 : 0.1;
+                });
+
+                linkGroup.style("opacity", function (o) {
+                    return o.source === d || o.target === d ? 1 : 0.1;
+                });
+            }
+            function resetOpacity() {
+                node.style("opacity", 1);
+                linkGroup.style("opacity", 1);
+            }
+            // Helper function to check if two nodes are connected
+            function isConnected(a, b) {
+                if (a.id === b.id) return true; // If the nodes are the same, they are connected
+                return edges.some(function (edge) {
+                    return (edge.source.id === a.id && edge.target.id === b.id) || (edge.source.id === b.id && edge.target.id === a.id);
+                });
+            }
+
+
+
+            // Show tooltip function
             // Show tooltip function
             // Show tooltip function
             function showTooltip(event, d) {
@@ -336,6 +379,17 @@
                         + '<p><strong>End Date:</strong> ' + (d.properties.properties.end_date || 'N/A') + '</p>')
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY + 10) + 'px');
+
+                // Highlight the connected nodes
+                node.style('opacity', function (node_d) {
+                    return isConnected(d, node_d) ? 1 : 0.2;
+                });
+                label.style('opacity', function (node_d) {
+                    return isConnected(d, node_d) ? 1 : 0.2;
+                });
+                linkGroup.style('opacity', function (link_d) {
+                    return link_d.source === d || link_d.target === d ? 1 : 0.2;
+                });
             }
 
 
@@ -350,6 +404,11 @@
             function hideTooltip() {
                 d3.select('.tooltip')
                     .style('display', 'none');
+
+                // Reset the opacity of the nodes and links
+                node.style('opacity', 1);
+                label.style('opacity', 1);
+                linkGroup.style('opacity', 1);
             }
 
             // Zoom function
