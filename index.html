@@ -77,8 +77,8 @@
         const labelThreshold = 2; // Set the zoom threshold for showing/hiding edge labels
         // Load the nodes and edges CSV files using d3.csv()
         Promise.all([
-            d3.csv('visualization/data/nodes.csv'),
-            d3.csv('visualization/data/edges.csv')
+            d3.csv('data/nodes.csv'),
+            d3.csv('data/edges.csv')
         ]).then(function (data) {
             var nodes = data[0];
             var edges = data[1];// Define a custom color map
@@ -187,7 +187,7 @@
                 .data(nodes)
                 .join("circle")
                 .attr("class", "node")
-                .attr("r", 25)
+                .attr("r", 27)
                 .attr("fill", function (d) { return colorMap[d.properties.labels]; })
                 .on("mouseover", showTooltip)
                 .on("mousemove", moveTooltip)
@@ -200,19 +200,69 @@
             var label = g.selectAll(".label")
                 .data(nodes)
                 .join("text")
-                .text(function (d) {
-                    var maxLength = 50;
-                    var label = d.name.length > maxLength ? d.name.substring(0, maxLength) + "..." : d.name;
-                    return label;
-                })
                 .attr("class", "label")
                 .attr("x", function (d) {
-                    return d.x; // adjust the value to fine-tune the vertical position of the text
+                    return d.x;
                 })
                 .attr("y", function (d) {
-                    return d.y; // adjust the value to fine-tune the vertical position of the text
+                    return d.y;
                 })
-            // .attr("dy", "1em"); // Adjust the y position to center the text vertically
+                .each(function (d) {
+                    var maxLengthPerLine = 10;
+                    var maxLengthTotal = 30;
+                    var words = d.name.split(' ');
+                    var line = '';
+                    var lineNumber = 0;
+                    var charCount = 0;
+                    var lineHeight = 1.1; // ems
+                    var tspan = d3.select(this).append("tspan") // Add first tspan element to label text this 
+                        .attr("x", function () { // Set the x position
+                            return d.x;
+                        })
+                        .attr("y", function () {
+                            return d.y;
+                        })
+                        .attr("dy", `${lineHeight - 2}em`);
+                    words.forEach(function (word, i) {
+                        if (charCount + word.length <= maxLengthTotal) {
+                            var testLine = line + word + " ";
+                            if (testLine.length > maxLengthPerLine) {
+                                tspan.text(line);
+                                line = word + " ";
+                                lineNumber += 1;
+                                tspan = d3.select(tspan.node().parentNode).append("tspan")
+                                    .attr("x", function () { // Set the x position 
+                                        return d.x;
+                                    })
+                                    .attr("y", function () {
+                                        return d.y;
+                                    })
+                                    .attr("dy", `${(lineNumber + 1) * lineHeight - 2}em`)
+                                    .text(line);
+                            } else {
+                                line = testLine;
+                            }
+                            charCount += word.length + 1;
+                        } else {
+                            // If adding the current word will exceed maxLengthTotal
+                            if (i === words.length - 1 || charCount + 3 > maxLengthTotal) {
+                                tspan.text(line.slice(0, -1) + '...');
+                            }
+                        }
+                        if (i === words.length - 1 && charCount <= maxLengthTotal) {
+                            tspan.text(line);
+                        }
+                    });
+                });
+            // Add event listeners for the label elements
+            label.on("mouseover", showTooltip)
+                .on("mousemove", moveTooltip)
+                .on("mouseout", hideTooltip)
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+
 
 
 
@@ -245,7 +295,10 @@
 
                 label
                     .attr('x', function (d) { return d.x; }) // Adjust the position of the text
-                    .attr('y', function (d) { return d.y; });  // Adjust the position of the text
+                    .attr('y', function (d) { return d.y; })  // Adjust the position of the text
+                    .selectAll("tspan") // Select all tspan elements inside the labels
+                    .attr("x", function (d) { return d.x; }) // Update the x position of the tspan elements
+                    .attr("y", function (d) { return d.y; }); // Update the y position of the tspan elements
 
                 edgeLabel
                     .attr("x", function (d) { return (d.source.x + d.target.x) / 2; })
