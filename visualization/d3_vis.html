@@ -25,10 +25,10 @@
         .label {
             font-size: 10px;
             text-anchor: middle;
-            white-space: pre-wrap; 
-            /* // wrap text */
-            /* // https://stackoverflow.com/questions/24784302/wrapping-text-in-d3 */
-            
+            white-space: pre-wrap;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-weight: 500;
+            fill: #333;
         }
 
         .link {
@@ -37,18 +37,35 @@
         }
 
         .edgeLabel {
-            font-size: 12px;
+            font-size: 10px;
             fill: #333;
+            display: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-weight: 500;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
         }
 
         .tooltip {
             position: absolute;
             z-index: 999;
-            background-color: rgb(255, 255, 255);
+            background-color: rgba(255, 255, 255, 0.9);
             border: 1px solid black;
-            padding: 5px;
-            font-size: 12px;
+            padding: 10px;
+            font-size: 14px;
             pointer-events: none;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            max-width: 300px;
+            line-height: 1.4;
+        }
+
+        .tooltip h4 {
+            margin: 0 0 5px 0;
+            font-weight: bold;
+        }
+
+        .tooltip p {
+            margin: 0;
         }
     </style>
 </head>
@@ -57,7 +74,7 @@
     <svg></svg>
     <div class="tooltip" style="display: none;"></div>
     <script>
-        const labelThreshold = 2;
+        const labelThreshold = 2; // Set the zoom threshold for showing/hiding edge labels
         // Load the nodes and edges CSV files using d3.csv()
         Promise.all([
             d3.csv('data/nodes.csv'),
@@ -158,9 +175,10 @@
 
 
             // Add zooming functionality
-            var zoom = d3.zoom()
-                .scaleExtent([0.1, 10])
-                .on("zoom", zoomed);
+            var zoom = d3.zoom() // Create the zoom object
+                .scaleExtent([0.1, 13]) //this line controls "how much" you can zoom in, lets make it a little more zoomed out
+
+                .on("zoom", zoomed); // This line tells D3 what to do when the zoom event is fired
 
             svg.call(zoom);
 
@@ -206,7 +224,12 @@
                 .attr("startOffset", "50%")
                 .attr("text-anchor", "middle")
                 .attr("xlink:href", function (d, i) { return `#edge-path-${i}`; })
+                .attr("dy", function (d) {
+                    var angle = Math.atan2(d.target.y - d.source.y, d.target.x - d.source.x) * 180 / Math.PI;
+                    return (angle > 90 || angle < -90) ? "-0.4em" : "1.2em";
+                })
                 .text(function (d) { return d.type; });
+
 
 
             // Update the visualization on each tick of the simulation
@@ -230,7 +253,7 @@
                     .text(function (d) { return d.type; });
             });
 
-            
+
             // Drag functions
             function dragstarted(event, d) {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -250,14 +273,18 @@
             }
 
             // Show tooltip function
+            // Show tooltip function
             function showTooltip(event, d) {
                 d3.select('.tooltip')
                     .style('display', 'block')
-                    //fix this in the future
-                    .html(d.name + '<br>' + 'notes:' + d.properties.properties.notes + '<br>' + 'start_date:' + d.properties.properties.start_date + '<br>' + 'end_date:' + d.properties.properties.end_date)
+                    .html('<h4>' + d.name + '</h4>'
+                        + '<p><strong>Notes:</strong> ' + (d.properties.properties.notes || 'N/A') + '</p>'
+                        + '<p><strong>Start Date:</strong> ' + (d.properties.properties.start_date || 'N/A') + '</p>'
+                        + '<p><strong>End Date:</strong> ' + (d.properties.properties.end_date || 'N/A') + '</p>')
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY + 10) + 'px');
             }
+
 
             // Move tooltip function
             function moveTooltip(event) {
