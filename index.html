@@ -67,18 +67,46 @@
         .tooltip p {
             margin: 0;
         }
+
+        #legend {
+            position: absolute;
+            top: 10px;
+            /* adjust as needed */
+            right: 10px;
+            /* adjust as needed */
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            /* semi-transparent white */
+            border-radius: 5px;
+        }
+
+        .legend-key {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .legend-key div {
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+        }
     </style>
 </head>
 
 <body>
     <svg></svg>
     <div class="tooltip" style="display: none;"></div>
+    <div id="legend"></div>
     <script>
+        const mouseoverDelay = 0600; // Delay in milliseconds (2000ms = 2 seconds)
         const labelThreshold = 2; // Set the zoom threshold for showing/hiding edge labels
         // Load the nodes and edges CSV files using d3.csv()
+
+
         Promise.all([
-            d3.csv('data/nodes.csv'),
-            d3.csv('data/edges.csv')
+            d3.csv('visualization/data/nodes.csv'),
+            d3.csv('visualization/data/edges.csv')
         ]).then(function (data) {
             var nodes = data[0];
             var edges = data[1];// Define a custom color map
@@ -98,6 +126,29 @@
                 'technology': '#17becf'
             };
 
+
+
+            var svg = d3.select("svg");
+
+            //// Legend items
+            var legend = d3.select("#legend");
+            // Add a div for each color in the color map
+            Object.entries(colorMap).forEach(([key, value]) => {
+                var row = legend.append("div")
+                    .attr("class", "legend-key");
+
+                row.append("div")
+                    .style("background-color", value)
+                    .style("width", "12px")
+                    .style("height", "12px")
+                    .style("border-radius", "50%");
+
+                row.append("span")
+                    .text(key);
+            });
+
+
+            ///node and edge properties
             nodes.forEach(function (node) {
                 if (node.properties) {
                     try {
@@ -142,7 +193,7 @@
                 });
 
 
-            var svg = d3.select('svg');
+            var svg = d3.select('svg')
             var defs = svg.append("defs"); // Add this line
             var g = svg.append("g");
 
@@ -158,7 +209,6 @@
                 .attr("class", "link")
                 .attr("id", function (d, i) { return `edge-path-${i}`; }) // Add unique ID to each path
                 .attr("marker-end", "url(#arrow)"); // Add arrow marker
-
 
             // Add this block after creating the defs element
             defs.append("marker")
@@ -182,6 +232,9 @@
 
             svg.call(zoom);
 
+
+            var highlightTimeout;
+
             // Create SVG circles for each node
             var node = g.selectAll(".node")
                 .data(nodes)
@@ -197,10 +250,17 @@
                     .on("drag", dragged)
                     .on("end", dragended));
             node.on("mouseover", function (event, d) {
-                showTooltip(event, d);
-                highlightConnectedNodes(event, d);
+                // Clear any existing timeout
+                clearTimeout(highlightTimeout);
+                // Set a new timeout to call the highlight function after a delay
+                highlightTimeout = setTimeout(function () {
+                    showTooltip(event, d);
+                    highlightConnectedNodes(event, d);
+                }, mouseoverDelay);
             })
                 .on("mouseout", function (event, d) {
+                    // Clear the timeout if the mouse leaves before the delay
+                    clearTimeout(highlightTimeout);
                     hideTooltip(event, d);
                     resetOpacity();
                 });
@@ -273,14 +333,17 @@
                     .on("drag", dragged)
                     .on("end", dragended))
                 .on("mouseover", function (event, d) {
-                    showTooltip(event, d);
-                    highlightConnectedNodes(event, d);
+                    clearTimeout(highlightTimeout);
+                    highlightTimeout = setTimeout(function () {
+                        showTooltip(event, d);
+                        highlightConnectedNodes(event, d);
+                    }, mouseoverDelay);
                 })
                 .on("mouseout", function (event, d) {
+                    clearTimeout(highlightTimeout);
                     hideTooltip(event, d);
                     resetOpacity();
-                });
-
+                })
 
 
             var edgeLabel = linkGroup.append("text")
@@ -326,7 +389,9 @@
             });
 
 
-            // Drag functions
+            /////functions
+
+            // Drag and zoom functions
             function dragstarted(event, d) {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
@@ -343,7 +408,21 @@
                 d.fx = d.x;
                 d.fy = d.y;
             }
+            // Zoom function
+            function zoomed(event) {
+                g.attr("transform", event.transform);
 
+                // Show or hide edge labels based on highlighting and zoom scale
+                if (event.transform.k >= labelThreshold) {
+                    linkGroup.selectAll(".edgeLabel").style("display", "block");
+                } else {
+                    linkGroup.selectAll(".edgeLabel:not(.highlighted-label)").style("display", "none");
+                }
+            }
+
+
+
+            //highlighter and opacity functions
             function highlightConnectedNodes(event, d) {
                 node.style("opacity", function (o) {
                     return isConnected(d, o) ? 1 : 0.1;
@@ -352,11 +431,25 @@
                 linkGroup.style("opacity", function (o) {
                     return o.source === d || o.target === d ? 1 : 0.1;
                 });
+                linkGroup.selectAll(".edgeLabel").each(function (o) {
+                    // If the edge is connected to the node being hovered over or connected to a node that is being hovered over then show the label
+                    if (o.source === d || o.target === d) {
+                        d3.select(this).style("display", "block").classed("highlighted-label", true);
+                    } else {
+                        d3.select(this).classed("highlighted-label", false);
+                    }
+                });
+
             }
+
             function resetOpacity() {
                 node.style("opacity", 1);
                 linkGroup.style("opacity", 1);
+                linkGroup.selectAll(".edgeLabel").each(function () {
+                    d3.select(this).style("display", "none").classed("highlighted-label", false);
+                });
             }
+
             // Helper function to check if two nodes are connected
             function isConnected(a, b) {
                 if (a.id === b.id) return true; // If the nodes are the same, they are connected
@@ -366,10 +459,7 @@
             }
 
 
-
-            // Show tooltip function
-            // Show tooltip function
-            // Show tooltip function
+            ///// tooltip functions
             function showTooltip(event, d) {
                 d3.select('.tooltip')
                     .style('display', 'block')
@@ -392,38 +482,20 @@
                 });
             }
 
-
-            // Move tooltip function
             function moveTooltip(event) {
                 d3.select('.tooltip')
                     .style('left', (event.pageX + 10) + 'px')
                     .style('top', (event.pageY + 10) + 'px');
             }
 
-            // Hide tooltip function
             function hideTooltip() {
                 d3.select('.tooltip')
                     .style('display', 'none');
-
                 // Reset the opacity of the nodes and links
                 node.style('opacity', 1);
                 label.style('opacity', 1);
                 linkGroup.style('opacity', 1);
             }
-
-            // Zoom function
-            function zoomed(event) {
-                g.attr("transform", event.transform);
-
-                // Show or hide edge labels based on the zoom scale
-                if (event.transform.k >= labelThreshold) {
-                    linkGroup.select(".edgeLabel").style("display", "block"); // Show edge labels
-                } else {
-                    linkGroup.select(".edgeLabel").style("display", "none"); // Hide edge labels
-                }
-            }
-
-
         })
     </script>
 </body>
