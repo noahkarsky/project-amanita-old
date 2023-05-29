@@ -12,21 +12,32 @@
     <link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
 <body>
-    <header>
-        <h1>Project Amanita</h1>
-        <p>A scientific endeavor to elucidate the complexities of the UFO phenomena for the public's understanding</p>
-    </header>
-    <main>
-        <section class="hero">
-            <!-- <img src="images/pa.jpg" alt="Project Amanita" width="300" height ="10" /> -->
-            <h2>Unveiling UFO Mysteries Through Data</h2>
-            <p>Visualizations aim to dispel obscurity and translate the cryptic nature of UFO data into digestible and insightful graphics</p>
-            <a href="visualizations/knowledge_graph/index.html" class="cta-link">Delve into the Knowledge Graph</a>
-        </section>
-    </main>
-    <footer>
-        <!-- <p>Fueled by rigorous scientific methods and inspired by the mystic charm of the Pacific Northwest</p> -->
-        <!-- <a href="about.html">Discover the Origins of Project Amanita</a> -->
-    </footer>
+    <div class="container">
+        <header>
+            <h1>Project Amanita</h1>
+            <p>An endeavor to elucidate the complexities of the UFO phenomena for the public's understanding. Visualizations aim to dispel obscurity and translate the cryptic nature of the phenomena into digestible and insightful graphics</p>
+        </header>
+        <main>
+
+            <section class="hero">
+                <h2>Knowledge Graph for the Phenomena</h2>
+                <p>This knowledge graph was initially created to test entity extraction capabilities on the fantastic <a href="https://omega-point.medium.com/loose-threads-af8f652ee8cb/">Loose Threads document</a>, but required a detailed hand curated approach. There are two csv data files within the repo for folks who wish to do their own work with it, as well as a neo4j .dump file. The knowledge graph is a work in progress and not the most ideal tool for detailed investigation.</p>
+                <div class="cta-wrapper" style="background-image: url('images/knowledge_graph_image.jpg') ">
+                    <a href="visualizations/knowledge_graph/index.html" class="cta-link">Delve into the Knowledge Graph</a>
+                </div>
+            </section>
+            
+            <section class="hero">
+                <h2>Timeline for the Phenomena</h2>
+                <p>Visualizations aim to dispel obscurity and translate the cryptic nature of UFO data into digestible and insightful graphics</p>
+                <a href="visualizations/timeline/index.html" class="cta-link">Delve into the Timeline</a>
+            </section>
+        </main>
+        <footer>
+            <!-- Uncommented footer content -->
+            <!-- <p>footer info</p> -->
+            <a href="about.html">Origins of Project Amanita</a>
+        </footer>
+    </div>
 </body>
 </html>
