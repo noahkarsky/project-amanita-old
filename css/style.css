@@ -7,7 +7,8 @@ body {
 }
 
 .container {
-    max-width: 1140px;
+    width: 100%;
+    max-width: none;
     margin: 0 auto;
     padding: 1em 1em;
 }
@@ -42,12 +43,6 @@ main {
     border-radius: 5px;
 }
 
-.hero img {
-    width: 100%;
-    height: auto;
-    border-radius: 5px;
-}
-
 .hero h2 {
     font-size: 1.5em;
     color: #3c493f;
@@ -58,10 +53,11 @@ main {
     line-height: 1.5;
 }
 
+
 .cta-link {
     display: inline-block;
     margin-top: 1em;
-    padding: 0.5em 1em;
+    padding: 1em 1em;
     border-radius: 4px;
     background-color: #9bc899;
     color: #3c493f;
@@ -106,7 +102,10 @@ footer a:hover {
     color: white;
 }
 
-#knowledge_graph {
+/* stuff for the knowledge graph */
+
+
+#visualization {
     width: 100%;
     height: calc(90vh - 6vh - 2vh - 2vh);
     /* reducing height to accommodate header and footer */
@@ -118,7 +117,6 @@ svg {
     height: 100%;
 }
 
-/* stuff for the knowledge graph */
 .node {
     stroke: rgb(0, 0, 0);
 }
