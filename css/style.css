@@ -105,7 +105,7 @@ footer a:hover {
 /* stuff for the knowledge graph */
 
 
-#knowledge_graph {
+#visualization {
     width: 100%;
     height: calc(90vh - 6vh - 2vh - 2vh);
     /* reducing height to accommodate header and footer */
